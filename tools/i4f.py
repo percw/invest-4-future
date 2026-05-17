@@ -10,11 +10,16 @@ hand-editing index files and guessing IDs.
     python3 tools/i4f.py index        # rebuild hypotheses/ + recommendations/ indices
     python3 tools/i4f.py status       # snapshot of live state (--json for agents)
     python3 tools/i4f.py new ...      # scaffold a new episode/hypothesis/recommendation
+    python3 tools/i4f.py review       # list hypotheses/positions due for review
+    python3 tools/i4f.py scorecard    # rebuild the calibration track record
 
 Indices and IDs become a pure function of the artifact files. An agent
-never invents an index row or a duplicate ID again.
+never invents an index row or a duplicate ID again. review + scorecard
+close the loop: surface what is due, then score what has closed so the
+playbook can be corrected on evidence.
 """
 import argparse
+import calendar
 import json
 import re
 import sys
@@ -36,6 +41,8 @@ HYP_ID_RE = re.compile(r"^MS-\d{4}-\d{2}-\d{2}-H\d+$")
 # front-matter parsing (minimal YAML subset - flat keys, inline lists)
 # --------------------------------------------------------------------------
 def _strip_comment(val):
+    if val.startswith("#"):
+        return ""
     if val.startswith('"'):
         m = re.match(r'"[^"]*"', val)
         return m.group(0) if m else val
@@ -116,6 +123,24 @@ def section(body, title_prefix):
         if capturing:
             out.append(ln)
     return "\n".join(out).strip()
+
+
+def add_months(iso_date, months):
+    """Return the date `months` after an ISO date string, clamping the day."""
+    y, m, d = (int(x) for x in iso_date.split("-"))
+    ny, nm = divmod(y * 12 + (m - 1) + months, 12)
+    nm += 1
+    return date(ny, nm, min(d, calendar.monthrange(ny, nm)[1]))
+
+
+def _age_days(value, today):
+    """Days between an ISO date string and today, or None if unparseable."""
+    if not value:
+        return None
+    try:
+        return (today - date.fromisoformat(str(value))).days
+    except ValueError:
+        return None
 
 
 # --------------------------------------------------------------------------
@@ -207,6 +232,8 @@ def cmd_validate(args):
         warnings.append(
             "indices stale (" + ", ".join(stale) + ") - run: python3 tools/i4f.py index"
         )
+    if _build_scorecard()[1]:
+        warnings.append("brain/scorecard.md stale - run: python3 tools/i4f.py scorecard")
 
     for w in warnings:
         print(f"warn:  {w}")
@@ -524,6 +551,176 @@ def cmd_new(args):
 
 
 # --------------------------------------------------------------------------
+# review + scorecard - the self-improvement loop
+# --------------------------------------------------------------------------
+def cmd_review(args):
+    today = date.today()
+    hyp_due, rec_due = [], []
+
+    for _, fm, _ in load_dir("hypotheses"):
+        if fm.get("status") != "ACTIVE":
+            continue
+        reasons = []
+        created, horizon = fm.get("created"), fm.get("horizon_months")
+        if created and isinstance(horizon, int):
+            try:
+                elapsed = add_months(str(created), horizon)
+                if elapsed <= today:
+                    reasons.append(f"horizon elapsed {elapsed.isoformat()}")
+            except (ValueError, TypeError):
+                pass
+        age = _age_days(fm.get("reviewed") or fm.get("updated"), today)
+        if age is not None and age > args.stale_days:
+            reasons.append(f"not reviewed in {age}d")
+        if reasons:
+            hyp_due.append({"id": fm.get("id"), "theme": fm.get("theme"), "reasons": reasons})
+
+    for _, fm, _ in load_dir("recommendations"):
+        if fm.get("status") not in ("BOUGHT", "TRIMMED"):
+            continue
+        age = _age_days(fm.get("reviewed") or fm.get("updated"), today)
+        if age is not None and age > args.stale_days:
+            rec_due.append(
+                {"ticker": fm.get("ticker"), "reasons": [f"position not reviewed in {age}d"]}
+            )
+
+    if args.json:
+        print(json.dumps({"hypotheses": hyp_due, "recommendations": rec_due}, indent=2,
+                         ensure_ascii=False))
+        return 0
+
+    if not hyp_due and not rec_due:
+        print("nothing due for review")
+        return 0
+    if hyp_due:
+        print("hypotheses due for review:")
+        for h in hyp_due:
+            print(f"  {h['id']:<22} {h['theme']}")
+            for r in h["reasons"]:
+                print(f"      - {r}")
+    if rec_due:
+        if hyp_due:
+            print()
+        print("positions due for review:")
+        for r in rec_due:
+            print(f"  {r['ticker']:<6} {r['reasons'][0]}")
+    return 0
+
+
+def _scorecard_text(hypotheses, recommendations):
+    closed = [h for h in hypotheses if h[1].get("status") in ("CONFIRMED", "FALSIFIED", "EXPIRED")]
+    active = [h for h in hypotheses if h[1].get("status") == "ACTIVE"]
+    realized = [r for r in recommendations if isinstance(r[1].get("realized_pct"), (int, float))]
+
+    out = [
+        "# Scorecard - calibration track record",
+        "",
+        "Rebuilt by `tools/i4f.py scorecard`. This is the self-improvement",
+        "layer's memory: it measures whether the process's own calls were",
+        "right, so `playbook.md` gets corrected on evidence, not vibes.",
+        "",
+        f"`{len(closed)}` hypotheses closed - `{len(realized)}` recommendations realized.",
+        "",
+        "## Closed hypotheses",
+        "",
+    ]
+    if closed:
+        out += ["| ID | Theme | Verdict | Conviction | Outcome |", "|---|---|---|---|---|"]
+        for path, fm, _ in sorted(closed, key=lambda h: h[1].get("id", "")):
+            out.append(
+                f"| [{fm['id']}](../hypotheses/{path.name}) | {fm.get('theme', '')} | "
+                f"{fm.get('verdict', '')} | {fm.get('conviction', '')} | {fm.get('status', '')} |"
+            )
+    else:
+        out.append("(none yet)")
+
+    out += ["", "## Verdict accuracy", ""]
+    nonconsensus = [h for h in closed if h[1].get("verdict") == "non-consensus"]
+    if nonconsensus:
+        hit = sum(1 for h in nonconsensus if h[1].get("status") == "CONFIRMED")
+        out.append(
+            f"non-consensus hypotheses confirmed: {hit} / {len(nonconsensus)} "
+            f"({round(100 * hit / len(nonconsensus))} %)"
+        )
+    else:
+        out.append("(none yet - needs closed non-consensus hypotheses)")
+
+    out += [
+        "",
+        "## Conviction calibration",
+        "",
+        "Do high-conviction calls actually confirm more often? If not, the",
+        "conviction tiers in `mandate.md` are miscalibrated.",
+        "",
+    ]
+    if closed:
+        out += ["| Conviction | Closed | Confirmed | Confirm rate |", "|---|---|---|---|"]
+        for tier in (5, 4, 3, 2, 1):
+            grp = [h for h in closed if h[1].get("conviction") == tier]
+            if not grp:
+                continue
+            hit = sum(1 for h in grp if h[1].get("status") == "CONFIRMED")
+            out.append(f"| {tier} | {len(grp)} | {hit} | {round(100 * hit / len(grp))} % |")
+    else:
+        out.append("(none yet)")
+
+    out += [
+        "",
+        "## Recommendation calibration (estimated vs realized)",
+        "",
+        "Was the asymmetry estimate honest in hindsight?",
+        "",
+    ]
+    if realized:
+        out += [
+            "| Ticker | Est. upside | Est. downside | Realized | In band |",
+            "|---|---|---|---|---|",
+        ]
+        in_band = 0
+        for path, fm, _ in sorted(realized, key=lambda r: r[1].get("ticker", "")):
+            up, dn, rz = fm.get("upside_pct"), fm.get("downside_pct"), fm.get("realized_pct")
+            band = isinstance(up, (int, float)) and isinstance(dn, (int, float)) and dn <= rz <= up
+            in_band += 1 if band else 0
+            out.append(
+                f"| [{fm['ticker']}](../recommendations/{path.name}) | {up} % | {dn} % | "
+                f"{rz} % | {'yes' if band else 'no'} |"
+            )
+        out += ["", f"Realized return inside the estimated band: {in_band} / {len(realized)}."]
+    else:
+        out.append("(none yet - needs recommendations with `realized_pct` set)")
+
+    out += [
+        "",
+        "## Open items",
+        "",
+        f"`{len(active)}` active hypotheses awaiting outcome. "
+        "Run `python3 tools/i4f.py review` for what is due.",
+    ]
+    return "\n".join(out) + "\n"
+
+
+def _build_scorecard():
+    """Return (scorecard_text, changed_bool)."""
+    text = _scorecard_text(load_dir("hypotheses"), load_dir("recommendations"))
+    path = ROOT / "brain" / "scorecard.md"
+    current = path.read_text(encoding="utf-8") if path.exists() else ""
+    return text, text != current
+
+
+def cmd_scorecard(args):
+    text, changed = _build_scorecard()
+    if args.check:
+        print(f"{'STALE' if changed else 'ok'}  brain/scorecard.md")
+        return 1 if changed else 0
+    if changed:
+        (ROOT / "brain" / "scorecard.md").write_text(text, encoding="utf-8")
+        print("rewrote brain/scorecard.md")
+    else:
+        print("ok      brain/scorecard.md (unchanged)")
+    return 0
+
+
+# --------------------------------------------------------------------------
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="i4f", description="Deterministic toolkit for the invest-4-future brain."
@@ -558,6 +755,17 @@ def main(argv=None):
     p_rec.add_argument("--company", required=True)
     p_rec.add_argument("--hypothesis", required=True, help="hypothesis id")
     p_new.set_defaults(func=cmd_new)
+
+    p_review = sub.add_parser("review", help="list hypotheses/positions due for review")
+    p_review.add_argument("--json", action="store_true", help="machine-readable output")
+    p_review.add_argument(
+        "--stale-days", type=int, default=90, help="flag artifacts not reviewed in N days"
+    )
+    p_review.set_defaults(func=cmd_review)
+
+    p_score = sub.add_parser("scorecard", help="rebuild brain/scorecard.md from closed artifacts")
+    p_score.add_argument("--check", action="store_true", help="report staleness without writing")
+    p_score.set_defaults(func=cmd_scorecard)
 
     args = parser.parse_args(argv)
     return args.func(args)

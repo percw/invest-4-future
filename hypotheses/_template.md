@@ -3,6 +3,7 @@ id: MS-YYYY-MM-DD-H{n}
 episode: MS-YYYY-MM-DD
 created: YYYY-MM-DD
 updated: YYYY-MM-DD
+reviewed:                           # YYYY-MM-DD - set by the review cycle (prompt 06)
 theme: ""                           # e.g. Semis / Robotics / Energy
 horizon_months: 18
 verdict: non-consensus              # non-consensus | priced-in | hype | too-early
@@ -46,3 +47,15 @@ What would make me abandon this thesis? Be specific.
 
 - YYYY-MM-DD: created
 - 
+
+## Review
+
+Filled when the hypothesis closes (status -> CONFIRMED / FALSIFIED / EXPIRED).
+The review cycle (`prompts/06-review.md`) writes this; `i4f scorecard` reads
+the front-matter to score it.
+
+- **Outcome**: what happened vs the claim above.
+- **Catalysts**: which fired, which did not.
+- **Verdict check**: was `verdict` the right call, in hindsight?
+- **Conviction check**: was the conviction level calibrated to the outcome?
+- **Lesson**: one line - propose for `brain/lessons.md`.
