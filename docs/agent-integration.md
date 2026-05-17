@@ -112,9 +112,62 @@ Full detail is in `AGENTS.md` (definition of done). The short version:
    hypothesis` / `new recommendation` to create the files.
 4. Run `python3 tools/i4f.py index` to rebuild the indices.
 5. Run `python3 tools/i4f.py validate`. Fix any errors.
-6. Review `git diff hypotheses/ recommendations/` before committing.
-7. Commit with a conventional message:
+6. Read `portfolio/journal.md` — recent entries carry fills, decisions,
+   and out-of-band context from the user. Factor them in before committing.
+7. Review `git diff hypotheses/ recommendations/` before committing.
+8. Commit with a conventional message:
    `weekly: MS-YYYY-MM-DD — {short title}`
+
+---
+
+## Decision loop
+
+The weekly run produces recommendations. The decision loop turns them into
+actionable signals and carries the user's feedback back. Run it whenever a
+read on what to do is wanted — independent of the weekly cadence.
+
+Full detail is in the "Decision loop" section of `AGENTS.md`. The short
+version:
+
+1. **Refresh `portfolio/prices.md`.** Hermes fetches current quotes for
+   every held and watched ticker by whatever quote source it has, then
+   rewrites the price table. The CLI does not fetch prices itself — that
+   is Hermes's job. Leave `—` for any ticker it cannot quote; the board
+   will flag it as `NO PRICE`.
+
+2. **Run `board` to rebuild the action board.**
+
+   ```sh
+   python3 tools/i4f.py board
+   ```
+
+   This reads `portfolio/prices.md`, all recommendations, and
+   `portfolio/positions.md`, then writes `portfolio/action-board.md` with
+   three sections:
+   - **Buy signals** — each NEW/WATCHING recommendation: price placed
+     against its entry zone (in zone / below / above / wait).
+   - **Sell / review signals** — held positions whose linked hypothesis
+     was falsified, expired, or rejected.
+   - **Portfolio performance** — per-position value and P/L %.
+
+   The board is a decision surface, not a trade order. The human decides.
+
+3. **Surface the board to the user.** Present `portfolio/action-board.md`
+   and wait for a response.
+
+4. **Log fills and observations with `journal`.**
+
+   ```sh
+   python3 tools/i4f.py journal "bought TSM 8 @ 272"
+   ```
+
+   This appends a dated line to `portfolio/journal.md`. The weekly run
+   and the review cycle both read recent journal entries — it is how fills,
+   doubts, and market events reach the process. Append-only; never rewrite
+   past entries.
+
+`portfolio/action-board.md` is git-tracked. Its diffs are a log of how
+signals evolved over time.
 
 ---
 
@@ -138,6 +191,10 @@ read/write files and run shell commands.
 
 5. **Wire `validate` before every commit.** The agent should refuse to
    commit if `validate` exits non-zero.
+
+6. **For decision-loop runs:** fetch prices into `portfolio/prices.md`,
+   run `board`, present `portfolio/action-board.md` to the user, then
+   record any reply with `journal`.
 
 There is no Hermes-specific config format or API to set up. The repo
 interface is files and shell commands; any agent that can exercise those
