@@ -1,18 +1,20 @@
 # Recommendations index
 
-## NEW (not yet acted on)
+Rebuilt by `tools/i4f.py index`.
+
+## NEW / WATCHING (not yet acted on)
 
 | Ticker | Exchange | Hypothesis | Conviction | Asymmetry | Entry zone | Size | ASK |
 |---|---|---|---|---|---|---|---|
-| [TSM](TSM.md) | NYSE | H1 (CoWoS bottleneck) | 4 | 2.0x | 260-285 USD | 2.5 % | ❌ |
-| [BESI](BESI.md) | AMS | H2 (HB equipment cycle) | 4 | 2.3x | 100-120 EUR | 2.0 % | ✅ |
-| [ABB](ABB.md) | STO | H1-2025 (robotics) | 3 | 1.75x | 530-560 SEK | 2.0 % | ✅ |
+| [BESI](BESI.md) | AMS | [MS-2026-05-01-H2](../hypotheses/MS-2026-05-01-H2.md) | 4 | 2.3x | 100-120 EUR | 2.0 % | ✅ |
+| [TSM](TSM.md) | NYSE | [MS-2026-05-01-H1](../hypotheses/MS-2026-05-01-H1.md) | 4 | 2.0x | 260-285 USD | 2.5 % | ❌ |
+| [ABB](ABB.md) | STO | [MS-2025-01-13-H1](../hypotheses/MS-2025-01-13-H1.md) | 3 | 1.75x | 530-560 SEK | 2.0 % | ✅ |
 
-## BOUGHT
+## BOUGHT / TRIMMED
 
-| Ticker | Exchange | Hypothesis | Notes |
-|---|---|---|---|
-| [NVDA](NVDA.md) | NASDAQ | H1-2025 | Held; pure-play test fails post-scale; review |
+| Ticker | Exchange | Hypothesis | Status | Asymmetry |
+|---|---|---|---|---|
+| [NVDA](NVDA.md) | NASDAQ | [MS-2025-01-13-H1](../hypotheses/MS-2025-01-13-H1.md) | BOUGHT | 1.5x |
 
 ## REJECTED / EXITED
 
