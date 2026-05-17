@@ -15,6 +15,7 @@ fresh catalyst data).
 - `brain/scorecard.md`
 - `brain/playbook.md`
 - `brain/lessons.md`
+- `portfolio/journal.md` (recent user messages — fills, doubts, events)
 - WebSearch
 
 ## Output

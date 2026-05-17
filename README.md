@@ -16,9 +16,9 @@ brain/            durable identity, mandate, framework — rarely changes
 episodes/         raw input layer, one file per podcast episode
 hypotheses/       living documents, status mutates over time
 recommendations/  one file per ticker, P/L tracked
-portfolio/        canonical state — positions, transactions, watchlist
+portfolio/        canonical state — positions, prices, journal, action board
 prompts/          cognitive cores, one file per agent role
-tools/            deterministic CLI — validate, index, status, review, scorecard
+tools/            deterministic CLI — validate, index, board, review, scorecard
 ```
 
 Read `AGENTS.md` for the operating manual. Read `brain/playbook.md` for
@@ -38,6 +38,8 @@ python3 tools/i4f.py status      # snapshot of live state (--json for agents)
 python3 tools/i4f.py new ...     # scaffold an episode/hypothesis/recommendation
 python3 tools/i4f.py review      # list hypotheses/positions due for review
 python3 tools/i4f.py scorecard   # rebuild the calibration track record
+python3 tools/i4f.py board       # rebuild the buy/sell/performance board
+python3 tools/i4f.py journal "." # append a message to the portfolio journal
 ```
 
 ## Weekly flow
@@ -59,6 +61,17 @@ that came true anyway), conviction calibration, estimated-vs-realized
 asymmetry. Recurring errors there feed proposed edits to the playbook. The
 process corrects itself on evidence, not memory. See `AGENTS.md` →
 "Review cycle".
+
+## Decision loop
+
+Recommendations only matter if they turn into action. Refresh
+`portfolio/prices.md`, then `i4f board` rebuilds `portfolio/action-board.md`
+— buy signals (each watched ticker's price against its entry zone), sell
+signals (positions whose thesis was falsified), and per-position P/L. It is
+a decision surface, not an order. Log every fill and observation with
+`i4f journal "..."` — `portfolio/journal.md` is the channel back to the
+model, and the weekly run and review cycle both read it. See `AGENTS.md` →
+"Decision loop".
 
 ## Why markdown, not Sheets
 
