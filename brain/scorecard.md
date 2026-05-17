@@ -4,7 +4,7 @@ Rebuilt by `tools/i4f.py scorecard`. This is the self-improvement
 layer's memory: it measures whether the process's own calls were
 right, so `playbook.md` gets corrected on evidence, not vibes.
 
-`0` hypotheses closed - `0` recommendations realized.
+`0` hypotheses closed - `0` rejects audited - `0` recommendations realized.
 
 ## Closed hypotheses
 
@@ -13,6 +13,14 @@ right, so `playbook.md` gets corrected on evidence, not vibes.
 ## Verdict accuracy
 
 (none yet - needs closed non-consensus hypotheses)
+
+## Rejected-pile audit
+
+"Half the alpha is in what you did not buy." Of rejected hypotheses
+whose horizon has elapsed and been audited, how many should have
+been kept?
+
+(none yet - needs rejected hypotheses past their horizon)
 
 ## Conviction calibration
 

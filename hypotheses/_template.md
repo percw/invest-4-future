@@ -8,6 +8,7 @@ theme: ""                           # e.g. Semis / Robotics / Energy
 horizon_months: 18
 verdict: non-consensus              # non-consensus | priced-in | hype | too-early
 status: ACTIVE                      # ACTIVE | CONFIRMED | FALSIFIED | EXPIRED | REJECTED
+reject_outcome:                     # vindicated | missed - set when a rejected hypothesis is audited
 conviction: 3                       # 1-5
 related_tickers: []
 ---
@@ -50,12 +51,14 @@ What would make me abandon this thesis? Be specific.
 
 ## Review
 
-Filled when the hypothesis closes (status -> CONFIRMED / FALSIFIED / EXPIRED).
-The review cycle (`prompts/06-review.md`) writes this; `i4f scorecard` reads
-the front-matter to score it.
+Filled by the review cycle (`prompts/06-review.md`) once the hypothesis
+resolves — either it closed (status CONFIRMED / FALSIFIED / EXPIRED) or it
+was rejected and its horizon has since elapsed (`reject_outcome` set).
+`i4f scorecard` reads the front-matter to score it.
 
 - **Outcome**: what happened vs the claim above.
 - **Catalysts**: which fired, which did not.
-- **Verdict check**: was `verdict` the right call, in hindsight?
+- **Verdict check**: was `verdict` the right call? For a rejected
+  hypothesis, did the claim come true anyway (a missed reject)?
 - **Conviction check**: was the conviction level calibrated to the outcome?
 - **Lesson**: one line - propose for `brain/lessons.md`.

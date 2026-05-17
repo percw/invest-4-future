@@ -1,8 +1,8 @@
 # Prompt 06 — Review & self-critique
 
 **Role**: review open hypotheses and positions, assess real-world outcomes,
-close the ones that have resolved, score the process's calibration, and
-propose corrections to the playbook.
+close the ones that have resolved, audit the rejected pile, score the
+process's calibration, and propose corrections to the playbook.
 
 **Suggested model**: Opus 4.7 + WebSearch (honest outcome assessment requires
 fresh catalyst data).
@@ -33,6 +33,12 @@ fresh catalyst data).
    - **Keep it ACTIVE** — if the thesis is intact and the horizon has not
      elapsed, bump `reviewed:` to today and append a dated update-log line
      noting the check.
+   - **Audit a reject** — for a hypothesis flagged with status REJECTED,
+     check whether the claim came true anyway. Set `reject_outcome:` to
+     `vindicated` (the reject held — the claim fizzled or stayed priced
+     in) or `missed` (the claim came true; alpha was left on the table).
+     Fill the `## Review` section and set `reviewed:` to today. Half the
+     alpha is in what you did not buy — a `missed` reject is a real error.
 
 3. For each due BOUGHT or TRIMMED position: confirm the thesis is still
    intact. If the position has been exited, set `status: EXITED`, fill
@@ -70,6 +76,8 @@ fresh catalyst data).
 - [ ] Every due hypothesis has `reviewed:` updated
 - [ ] Closed hypotheses have a filled `## Review` section and a
       `CONFIRMED` / `FALSIFIED` / `EXPIRED` status
+- [ ] Every rejected hypothesis past its horizon has `reject_outcome` set
+      and a filled `## Review` section
 - [ ] Closed positions have `status: EXITED`, `realized_pct`, and
       `exit_date` set, with a completed `## Review` section
 - [ ] `brain/scorecard.md` rebuilt via `python3 tools/i4f.py scorecard`

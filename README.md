@@ -54,7 +54,8 @@ The weekly run generates ideas; the review cycle scores them. When a
 hypothesis's horizon elapses, `i4f review` surfaces it,
 `prompts/06-review.md` assesses the real-world outcome and closes the file,
 and `i4f scorecard` rebuilds `brain/scorecard.md` — a running calibration
-record: verdict accuracy, conviction calibration, estimated-vs-realized
+record: verdict accuracy, the rejected-pile audit (claims you passed on
+that came true anyway), conviction calibration, estimated-vs-realized
 asymmetry. Recurring errors there feed proposed edits to the playbook. The
 process corrects itself on evidence, not memory. See `AGENTS.md` →
 "Review cycle".

@@ -32,6 +32,7 @@ EXCHANGES = {"NASDAQ", "NYSE", "OSL", "AMS", "STO", "LON", "EPA", "FRA"}
 HYP_VERDICTS = {"non-consensus", "priced-in", "hype", "too-early"}
 HYP_STATUS = {"ACTIVE", "CONFIRMED", "FALSIFIED", "EXPIRED", "REJECTED"}
 REC_STATUS = {"NEW", "WATCHING", "BOUGHT", "TRIMMED", "EXITED", "REJECTED"}
+REJECT_OUTCOMES = {"vindicated", "missed"}
 
 EPISODE_ID_RE = re.compile(r"^MS-\d{4}-\d{2}-\d{2}$")
 HYP_ID_RE = re.compile(r"^MS-\d{4}-\d{2}-\d{2}-H\d+$")
@@ -191,6 +192,9 @@ def collect(errors, warnings):
         conv = fm.get("conviction")
         if isinstance(conv, int) and not 1 <= conv <= 5:
             errors.append(f"{ctx}: conviction {conv} outside 1-5")
+        ro = fm.get("reject_outcome")
+        if ro and ro not in REJECT_OUTCOMES:
+            errors.append(f"{ctx}: reject_outcome '{ro}' not in {sorted(REJECT_OUTCOMES)}")
         if fm.get("status") == "REJECTED" and not section(_, "why rejected"):
             warnings.append(f"{ctx}: status REJECTED but no '## Why rejected' section")
 
@@ -558,20 +562,30 @@ def cmd_review(args):
     hyp_due, rec_due = [], []
 
     for _, fm, _ in load_dir("hypotheses"):
-        if fm.get("status") != "ACTIVE":
+        status = fm.get("status")
+        if status not in ("ACTIVE", "REJECTED"):
             continue
         reasons = []
         created, horizon = fm.get("created"), fm.get("horizon_months")
+        elapsed = None
         if created and isinstance(horizon, int):
             try:
                 elapsed = add_months(str(created), horizon)
-                if elapsed <= today:
-                    reasons.append(f"horizon elapsed {elapsed.isoformat()}")
             except (ValueError, TypeError):
-                pass
-        age = _age_days(fm.get("reviewed") or fm.get("updated"), today)
-        if age is not None and age > args.stale_days:
-            reasons.append(f"not reviewed in {age}d")
+                elapsed = None
+        if status == "ACTIVE":
+            if elapsed is not None and elapsed <= today:
+                reasons.append(f"horizon elapsed {elapsed.isoformat()}")
+            age = _age_days(fm.get("reviewed") or fm.get("updated"), today)
+            if age is not None and age > args.stale_days:
+                reasons.append(f"not reviewed in {age}d")
+        elif status == "REJECTED":
+            if (
+                elapsed is not None
+                and elapsed <= today
+                and fm.get("reject_outcome") not in REJECT_OUTCOMES
+            ):
+                reasons.append(f"rejected - audit the reject (horizon elapsed {elapsed.isoformat()})")
         if reasons:
             hyp_due.append({"id": fm.get("id"), "theme": fm.get("theme"), "reasons": reasons})
 
@@ -610,6 +624,11 @@ def cmd_review(args):
 def _scorecard_text(hypotheses, recommendations):
     closed = [h for h in hypotheses if h[1].get("status") in ("CONFIRMED", "FALSIFIED", "EXPIRED")]
     active = [h for h in hypotheses if h[1].get("status") == "ACTIVE"]
+    audited = [
+        h
+        for h in hypotheses
+        if h[1].get("status") == "REJECTED" and h[1].get("reject_outcome") in REJECT_OUTCOMES
+    ]
     realized = [r for r in recommendations if isinstance(r[1].get("realized_pct"), (int, float))]
 
     out = [
@@ -619,7 +638,8 @@ def _scorecard_text(hypotheses, recommendations):
         "layer's memory: it measures whether the process's own calls were",
         "right, so `playbook.md` gets corrected on evidence, not vibes.",
         "",
-        f"`{len(closed)}` hypotheses closed - `{len(realized)}` recommendations realized.",
+        f"`{len(closed)}` hypotheses closed - `{len(audited)}` rejects audited - "
+        f"`{len(realized)}` recommendations realized.",
         "",
         "## Closed hypotheses",
         "",
@@ -644,6 +664,38 @@ def _scorecard_text(hypotheses, recommendations):
         )
     else:
         out.append("(none yet - needs closed non-consensus hypotheses)")
+
+    out += [
+        "",
+        "## Rejected-pile audit",
+        "",
+        '"Half the alpha is in what you did not buy." Of rejected hypotheses',
+        "whose horizon has elapsed and been audited, how many should have",
+        "been kept?",
+        "",
+    ]
+    if audited:
+        out += ["| ID | Theme | Reject verdict | Reject outcome |", "|---|---|---|---|"]
+        for path, fm, _ in sorted(audited, key=lambda h: h[1].get("id", "")):
+            out.append(
+                f"| [{fm['id']}](../hypotheses/{path.name}) | {fm.get('theme', '')} | "
+                f"{fm.get('verdict', '')} | {fm.get('reject_outcome', '')} |"
+            )
+        missed = sum(1 for h in audited if h[1].get("reject_outcome") == "missed")
+        out += [
+            "",
+            f"Missed rejects: {missed} / {len(audited)} - "
+            "claims rejected that came true anyway.",
+            "",
+            "| Reject verdict | Audited | Missed | Miss rate |",
+            "|---|---|---|---|",
+        ]
+        for verdict in sorted({h[1].get("verdict") for h in audited if h[1].get("verdict")}):
+            grp = [h for h in audited if h[1].get("verdict") == verdict]
+            m = sum(1 for h in grp if h[1].get("reject_outcome") == "missed")
+            out.append(f"| {verdict} | {len(grp)} | {m} | {round(100 * m / len(grp))} % |")
+    else:
+        out.append("(none yet - needs rejected hypotheses past their horizon)")
 
     out += [
         "",

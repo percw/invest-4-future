@@ -63,8 +63,8 @@ indices or guessing IDs — its output is deterministic.
 | `i4f index` | Rebuild `hypotheses/_index.md` and `recommendations/_index.md` from the artifact files. Never hand-edit an `_index.md`. |
 | `i4f status` | Snapshot of live state (counts, active hypotheses, watchlist). `--json` for programmatic use. |
 | `i4f new episode\|hypothesis\|recommendation` | Scaffold a new artifact from its template with IDs and dates filled in. Hypothesis numbers (`-H{n}`) auto-increment. |
-| `i4f review` | List hypotheses and positions due for review — horizon elapsed, or not reviewed in 90 days. The entry point of the review cycle. |
-| `i4f scorecard` | Rebuild `brain/scorecard.md` — the calibration track record (verdict accuracy, conviction calibration, estimated-vs-realized). |
+| `i4f review` | List hypotheses and positions due for review — horizon elapsed, not reviewed in 90 days, or a rejected hypothesis past its horizon awaiting a reject-audit. The entry point of the review cycle. |
+| `i4f scorecard` | Rebuild `brain/scorecard.md` — the calibration track record (verdict accuracy, rejected-pile audit, conviction calibration, estimated-vs-realized). |
 
 Invoke as `python3 tools/i4f.py <command>` from anywhere in the repo.
 `validate` exits non-zero on errors; wire it into your pre-commit step.
@@ -98,6 +98,9 @@ periodic cadence (monthly, or whenever `i4f review` surfaces items):
 2. For each, assess the outcome — use WebSearch for catalysts and
    falsification triggers. Set `status` to CONFIRMED / FALSIFIED /
    EXPIRED, fill the `## Review` section, set `reviewed:` to today.
+   For rejected hypotheses past their horizon, audit whether the claim
+   came true anyway and set `reject_outcome` to `vindicated` or `missed`
+   — half the alpha is in what you didn't buy.
 3. `python3 tools/i4f.py scorecard` — rebuild `brain/scorecard.md`
    (verdict accuracy, conviction calibration, estimated-vs-realized).
 4. Append notable hits and misses to `brain/lessons.md`.
