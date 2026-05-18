@@ -26,12 +26,17 @@ For a one-shot snapshot before loading individual files, run
 | `episodes/MS-*.md` | User pastes raw input; agent reads. |
 | `hypotheses/*.md` | Agent creates. User edits verdict/conviction freely. |
 | `recommendations/*.md` | Agent creates. Status field user-controlled. |
-| `portfolio/positions.md`, `transactions.md` | User-controlled. Agent reads, may suggest. |
+| `portfolio/positions.md`, `transactions.md` | User-controlled. Agent reads, may suggest. **Git-ignored — local/private.** |
 | `portfolio/watchlist.md` | Agent appends. User prunes. |
-| `portfolio/prices.md` | Agent or user refreshes — a price snapshot, overwritten freely. |
-| `portfolio/journal.md` | User appends via `i4f journal`. Agent reads, never edits. |
-| `portfolio/action-board.md` | Agent rebuilds via `i4f board`. Don't hand-edit. |
+| `portfolio/prices.md` | Agent or user refreshes — a price snapshot, overwritten freely. **Git-ignored — local/private.** |
+| `portfolio/journal.md` | User appends via `i4f journal`. Agent reads, never edits. **Git-ignored — local/private.** |
+| `portfolio/action-board.md` | Agent rebuilds via `i4f board`. Don't hand-edit. **Git-ignored — local/private.** |
 | `prompts/*.md` | User curates. |
+
+Files marked **local/private** are git-ignored: they hold real holdings,
+trade prices, and P&L, and never leave your machine. The CLI tolerates
+their absence — in a fresh clone the board is simply empty until they are
+populated locally.
 
 ## Conventions
 

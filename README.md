@@ -16,7 +16,7 @@ brain/            durable identity, mandate, framework — rarely changes
 episodes/         raw input layer, one file per podcast episode
 hypotheses/       living documents, status mutates over time
 recommendations/  one file per ticker, P/L tracked
-portfolio/        canonical state — positions, prices, journal, action board
+portfolio/        watchlist (shared); holdings, trades, prices, board (git-ignored)
 prompts/          cognitive cores, one file per agent role
 tools/            deterministic CLI — validate, index, board, review, scorecard
 ```

@@ -166,8 +166,9 @@ version:
    doubts, and market events reach the process. Append-only; never rewrite
    past entries.
 
-`portfolio/action-board.md` is git-tracked. Its diffs are a log of how
-signals evolved over time.
+`portfolio/positions.md`, `prices.md`, `journal.md`, and `action-board.md`
+are git-ignored — they hold real holdings and performance, so they stay on
+the machine where the agent runs and never reach the shared repo.
 
 ---
 
