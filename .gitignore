@@ -9,3 +9,10 @@ __pycache__/
 .env
 .env.local
 secrets/
+
+# Private — actual holdings, trades, prices, and performance (local only)
+portfolio/positions.md
+portfolio/transactions.md
+portfolio/prices.md
+portfolio/journal.md
+portfolio/action-board.md

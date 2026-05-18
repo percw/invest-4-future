@@ -10,6 +10,7 @@ When you start a session in this repo, read these in order:
 4. `brain/world-model.md` — current macro/sector view
 5. `brain/scorecard.md` — calibration track record: what the process gets right/wrong
 6. `hypotheses/_index.md` — what's live
+7. `portfolio/journal.md` — recent messages from the user (newest last)
 
 Only load the slice you need. Don't dump the whole repo into context.
 For a one-shot snapshot before loading individual files, run
@@ -25,9 +26,17 @@ For a one-shot snapshot before loading individual files, run
 | `episodes/MS-*.md` | User pastes raw input; agent reads. |
 | `hypotheses/*.md` | Agent creates. User edits verdict/conviction freely. |
 | `recommendations/*.md` | Agent creates. Status field user-controlled. |
-| `portfolio/positions.md`, `transactions.md` | User-controlled. Agent reads, may suggest. |
+| `portfolio/positions.md`, `transactions.md` | User-controlled. Agent reads, may suggest. **Git-ignored — local/private.** |
 | `portfolio/watchlist.md` | Agent appends. User prunes. |
+| `portfolio/prices.md` | Agent or user refreshes — a price snapshot, overwritten freely. **Git-ignored — local/private.** |
+| `portfolio/journal.md` | User appends via `i4f journal`. Agent reads, never edits. **Git-ignored — local/private.** |
+| `portfolio/action-board.md` | Agent rebuilds via `i4f board`. Don't hand-edit. **Git-ignored — local/private.** |
 | `prompts/*.md` | User curates. |
+
+Files marked **local/private** are git-ignored: they hold real holdings,
+trade prices, and P&L, and never leave your machine. The CLI tolerates
+their absence — in a fresh clone the board is simply empty until they are
+populated locally.
 
 ## Conventions
 
@@ -65,6 +74,8 @@ indices or guessing IDs — its output is deterministic.
 | `i4f new episode\|hypothesis\|recommendation` | Scaffold a new artifact from its template with IDs and dates filled in. Hypothesis numbers (`-H{n}`) auto-increment. |
 | `i4f review` | List hypotheses and positions due for review — horizon elapsed, not reviewed in 90 days, or a rejected hypothesis past its horizon awaiting a reject-audit. The entry point of the review cycle. |
 | `i4f scorecard` | Rebuild `brain/scorecard.md` — the calibration track record (verdict accuracy, rejected-pile audit, conviction calibration, estimated-vs-realized). |
+| `i4f board` | Rebuild `portfolio/action-board.md` — buy signals (price vs entry zone), sell/review signals (falsified theses), per-position P/L. Refresh `portfolio/prices.md` first. |
+| `i4f journal "..."` | Append a dated message to `portfolio/journal.md` — the user's feedback channel. |
 
 Invoke as `python3 tools/i4f.py <command>` from anywhere in the repo.
 `validate` exits non-zero on errors; wire it into your pre-commit step.
@@ -86,6 +97,29 @@ Invoke as `python3 tools/i4f.py <command>` from anywhere in the repo.
 - [ ] `python3 tools/i4f.py index` run (rebuilds both `_index.md` files)
 - [ ] `python3 tools/i4f.py validate` passes with no errors
 - [ ] One commit. Conventional message: `weekly: MS-YYYY-MM-DD — {short title}`
+
+## Decision loop — buy, sell, and feedback
+
+The pipeline produces recommendations; the decision loop turns them into
+actions and carries the user's feedback back. Run it whenever a read on
+what to do is wanted:
+
+1. Refresh `portfolio/prices.md` — the local agent fetches current quotes
+   for every held and watched ticker, or the user edits the table by hand.
+2. `python3 tools/i4f.py board` rebuilds `portfolio/action-board.md`:
+   - **Buy signals** — each NEW/WATCHING recommendation, its price placed
+     against its entry zone (in zone / below / above / wait).
+   - **Sell / review signals** — held positions whose linked hypothesis
+     was falsified, expired, or rejected.
+   - **Portfolio performance** — per-position value and P/L.
+   The board is a decision surface, not an order. The user decides.
+3. Log every fill, decision, or observation with
+   `python3 tools/i4f.py journal "bought TSM 8 @ 272"`.
+
+`portfolio/journal.md` is the user's channel to the model. The weekly run
+and the review cycle both read recent journal entries before acting — it
+is how out-of-band context (a fill, a doubt, a market event) reaches the
+process. Append-only; never rewrite past entries.
 
 ## Review cycle — the self-improvement loop
 
